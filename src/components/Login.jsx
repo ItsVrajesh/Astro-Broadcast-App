@@ -40,14 +40,14 @@ export default function Login({ setUser }) {
 
     // Send email using EmailJS
     emailjs.send(
-      'service_5k85vc2',     // Replace with your EmailJS Service ID
-      'template_xipzxh8',    // Replace with your EmailJS Template ID
+      import.meta.env.VITE_EMAILJS_SERVICE_ID,
+      import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
       {
         to_name: name,
         to_email: email,
         otp: newOtp,
       },
-      '6G5KZzOvBY8qp8kaD'      // Replace with your EmailJS Public Key
+      import.meta.env.VITE_EMAILJS_PUBLIC_KEY
     )
     .then(() => {
       // Only move to step 2 if the email actually sends successfully

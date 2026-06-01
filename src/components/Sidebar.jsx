@@ -8,118 +8,135 @@ export default function Sidebar({
   currentUser,
   createChat,
   handleLogout,
-  deleteChat, // <-- Added deleteChat here
+  deleteChat,
 }) {
-  // 1. Define your state inside the actual component
   const [isDragOverBin, setIsDragOverBin] = useState(false);
 
   return (
-    <div className="w-80 glass-dark rounded-3xl flex flex-col overflow-hidden text-white">
-      {/* Header Profile Area */}
-      <div className="p-5 border-b border-white/10 flex justify-between items-center bg-white/5">
-        <div className="flex items-center gap-3">
+    <div className="w-80 glass-dark rounded-3xl flex flex-col overflow-hidden text-white p-4">
+      
+      {/* --- USER PROFILE SECTION --- */}
+      <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl p-3 mb-4 shrink-0">
+        <div className="flex items-center gap-3 overflow-hidden">
           <img
-            src={currentUser?.photoURL}
-            alt="User"
-            className="w-10 h-10 rounded-full border border-white/20"
+            src={currentUser?.photoURL || "/default-avatar.png"}
+            alt="Profile"
+            className="w-10 h-10 rounded-full object-cover shrink-0 border-2 border-[#8b5cf6]/50"
           />
-          <div className="font-semibold text-sm truncate w-32">
-            {currentUser?.displayName}
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-semibold text-white truncate w-full capitalize">
+              {currentUser?.displayName || "User"}
+            </span>
+            <span className="text-[10px] text-[#8b5cf6] font-medium tracking-wide uppercase">
+              Online
+            </span>
           </div>
         </div>
+
         <button
           onClick={handleLogout}
-          className="text-xs bg-white/10 hover:bg-red-500/80 px-3 py-1.5 rounded-lg transition-colors"
-        >
-          Logout
-        </button>
-      </div>
-
-      {/* Controls */}
-      <div className="p-4">
-        <button
-          onClick={createChat}
-          className="w-full flex items-center justify-center gap-2 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-purple-500/20"
+          className="shrink-0 p-2 ml-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-all duration-200"
+          title="Logout"
         >
           <svg
-            className="w-5 h-5"
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
             fill="none"
-            stroke="currentColor"
             viewBox="0 0 24 24"
+            stroke="currentColor"
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth="2"
-              d="M12 4v16m8-8H4"
-            ></path>
+              strokeWidth={2}
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+            />
           </svg>
-          New Broadcast
         </button>
       </div>
 
-      {/* Chat List */}
-      <div className="flex-1 overflow-y-auto space-y-2 p-4">
-        {chats.map((chat) => (
-          <div
-            key={chat.id}
-            // Make the item draggable
-            draggable={true}
-            // Store the chat ID in the dataTransfer object when dragging starts
-            onDragStart={(e) => {
-              e.dataTransfer.setData("chatId", chat.id);
-            }}
-            onClick={() => selectChat(chat)}
-            className={`p-3 rounded-xl cursor-pointer transition-colors ${
-              selectedChat?.id === chat.id
-                ? "bg-[#4b4e6d]"
-                : "bg-[#2a2d3d] hover:bg-[#34374b]"
-            }`}
-          >
-            <div className="font-medium text-white">{chat.name}</div>
-          </div>
-        ))}
+      {/* --- CHANNELS SECTION --- */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* New Broadcast Button */}
+        <button
+          onClick={createChat}
+          className="w-full shrink-0 flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-[#8b5cf6] to-[#4f46e5] rounded-xl text-white font-medium text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          New Broadcast
+        </button>
+
+        {/* Section Header */}
+        <div className="mt-6 mb-3 px-1 flex items-center justify-between shrink-0">
+          <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Active Channels</h3>
+          <span className="text-[10px] text-[#8b5cf6] bg-[#8b5cf6]/10 px-2 py-0.5 rounded-full font-medium border border-[#8b5cf6]/20">
+            {chats?.length || 0}
+          </span>
+        </div>
+
+        {/* Chat List (Scrollable) */}
+        <div className="flex-1 overflow-y-auto space-y-2 pr-1 pb-2 scrollbar-hide">
+          {chats?.map((chat) => (
+            <div
+              key={chat.id}
+              draggable={true}
+              onDragStart={(e) => {
+                e.dataTransfer.setData("chatId", chat.id);
+              }}
+              onClick={() => selectChat(chat)}
+              className={`group relative flex items-center p-3 rounded-xl cursor-pointer transition-all duration-200 border ${
+                selectedChat?.id === chat.id
+                  ? 'bg-[#8b5cf6]/20 border-[#8b5cf6]/50 shadow-[inset_0_0_20px_rgba(139,92,246,0.1)]'
+                  : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'
+              }`}
+            >
+              <div className={`p-2 rounded-lg mr-3 transition-colors ${
+                selectedChat?.id === chat.id ? 'bg-[#8b5cf6]/30 text-[#c4b5fd]' : 'bg-black/20 text-gray-400 group-hover:text-gray-300'
+              }`}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              
+              <span className={`text-sm font-medium truncate ${
+                selectedChat?.id === chat.id ? 'text-white' : 'text-gray-300'
+              }`}>
+                {chat.name}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
-      
-      {/* The Bin Drop Zone */}
+
+      {/* --- DELETE ZONE --- */}
       <div
-        // Required to allow dropping
         onDragOver={(e) => e.preventDefault()}
-        // Visual feedback when dragged item enters the bin area
         onDragEnter={() => setIsDragOverBin(true)}
-        // Revert visual feedback when item leaves
         onDragLeave={() => setIsDragOverBin(false)}
-        // Handle the actual drop
         onDrop={(e) => {
           e.preventDefault();
-          setIsDragOverBin(false); // Reset visual state
-
-          // Retrieve the ID we set in onDragStart
+          setIsDragOverBin(false);
           const chatIdToDelete = e.dataTransfer.getData("chatId");
-
           if (chatIdToDelete) {
-            // Trigger a confirmation or delete it directly
-            if (
-              window.confirm("Are you sure you want to delete this broadcast?")
-            ) {
-              // Call your delete function here (e.g., Firestore deleteDoc)
+            if (window.confirm("Are you sure you want to delete this broadcast?")) {
               deleteChat(chatIdToDelete);
             }
           }
         }}
-        className={`h-20 border-t border-gray-700/50 flex flex-col items-center justify-center transition-all duration-200 ${
+        className={`mt-2 shrink-0 py-4 rounded-xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center cursor-pointer ${
           isDragOverBin
-            ? "bg-red-500/20 text-red-500 border-red-500/50" // Highlighted state
-            : "text-gray-500 hover:text-gray-400" // Normal state
+            ? "border-red-500 bg-red-500/20 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)]"
+            : "border-gray-600/40 bg-black/20 text-gray-500 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
         }`}
       >
-        <Trash2
-          className={`w-6 h-6 mb-1 ${isDragOverBin ? "animate-bounce" : ""}`}
-        />
-        <span className="text-xs font-semibold uppercase tracking-wider">
+        <Trash2 className={`w-5 h-5 mb-1 transition-all ${isDragOverBin ? "animate-bounce" : "opacity-70 group-hover:opacity-100"}`} />
+        <span className="text-[10px] font-bold tracking-widest uppercase">
           {isDragOverBin ? "Drop to Delete" : "Drag here to delete"}
         </span>
       </div>
+
     </div>
   );
 }

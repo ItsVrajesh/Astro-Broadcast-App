@@ -15,7 +15,24 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
   const endRef = useRef(null);
 
   const isFirstLoad = useRef(true);
-  const audio = useRef(new Audio("/notification.mp3"));
+  
+  // --- 1. REPLACED new Audio() WITH A REACT REF ---
+  const audioRef = useRef(null);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+
+  // --- 2. THE MOBILE UNLOCK TRICK ---
+  const unlockAudio = () => {
+    if (!audioUnlocked && audioRef.current) {
+      // Play silently on the first tap to get browser permission
+      audioRef.current.volume = 0; 
+      audioRef.current.play().then(() => {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current.volume = 1; // Turn volume back up for real messages
+        setAudioUnlocked(true);
+      }).catch(err => console.log("Unlock failed:", err));
+    }
+  };
 
   useEffect(() => {
     if (!chat?.id) return;
@@ -35,9 +52,14 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
           if (change.type === "added") {
             const newMessage = change.doc.data();
             if (newMessage.senderId !== currentUser.uid) {
-              audio.current.play().catch((err) => {
-                console.log("Browser blocked autoplay:", err);
-              });
+              
+              // --- 3. TRIGGER THE DOM AUDIO REF ---
+              if (audioRef.current) {
+                audioRef.current.play().catch((err) => {
+                  console.log("Browser blocked autoplay:", err);
+                });
+              }
+
             }
           }
         });
@@ -74,18 +96,8 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
     return (
       <div className="flex-1 glass-dark rounded-3xl hidden md:flex items-center justify-center text-white/50">
         <div className="text-center">
-          <svg
-            className="w-16 h-16 mx-auto mb-4 opacity-50"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1"
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            ></path>
+          <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
           </svg>
           <p>Select a transmission channel to begin</p>
         </div>
@@ -94,7 +106,16 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
   }
 
   return (
-    <div className="flex-1 glass-dark rounded-3xl flex flex-col overflow-hidden relative w-full shadow-2xl">
+    // --- 4. ATTACHED UNLOCK TRIGGER TO THE ENTIRE CHAT WINDOW ---
+    <div 
+      onClick={unlockAudio} 
+      onTouchStart={unlockAudio}
+      className="flex-1 glass-dark rounded-3xl flex flex-col overflow-hidden relative w-full shadow-2xl"
+    >
+      
+      {/* --- HIDDEN AUDIO TAG IN THE DOM --- */}
+      <audio ref={audioRef} src="/notification.mp3" preload="auto" />
+
       {/* --- POLISHED CHAT HEADER --- */}
       <div className="p-4 sm:p-5 border-b border-white/5 bg-white/5 backdrop-blur-xl flex items-center gap-3 z-10">
         <button
@@ -119,17 +140,10 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
         {messages.map((msg) => {
           const isSent = msg.senderId === currentUser.uid;
           return (
-            <div
-              key={msg.id}
-              className={`flex gap-3 ${isSent ? "justify-end" : "justify-start"}`}
-            >
-              {/* Receiver Avatar */}
+            <div key={msg.id} className={`flex gap-3 ${isSent ? "justify-end" : "justify-start"}`}>
               {!isSent && (
                 <img
-                  src={
-                    msg.senderPhoto ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.displayName || "U")}&background=374151&color=fff`
-                  }
+                  src={msg.senderPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.displayName || "U")}&background=374151&color=fff`}
                   alt="User"
                   className="w-8 h-8 rounded-full border border-white/10 object-cover bg-gray-800 shrink-0 mt-auto"
                   onError={(e) => {
@@ -139,24 +153,14 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
                 />
               )}
 
-              {/* Message Wrapper (Column) */}
               <div className={`flex flex-col ${isSent ? "items-end" : "items-start"} max-w-[75%] sm:max-w-[70%]`}>
-                
-                {/* --- NEW: SENDER NAME DISPLAY --- */}
                 {!isSent && (
                   <span className="text-[11px] text-white/40 font-semibold mb-1 ml-1 tracking-wider uppercase truncate max-w-full">
                     {msg.displayName || "Unknown User"}
                   </span>
                 )}
 
-                {/* Message Bubble */}
-                <div
-                  className={`px-4 py-2.5 text-[15px] shadow-sm leading-relaxed w-full ${
-                    isSent
-                      ? "bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] text-white rounded-2xl rounded-br-sm shadow-[0_4px_15px_rgba(139,92,246,0.2)]"
-                      : "bg-white/10 backdrop-blur-md text-gray-100 rounded-2xl rounded-bl-sm border border-white/5"
-                  }`}
-                >
+                <div className={`px-4 py-2.5 text-[15px] shadow-sm leading-relaxed w-full ${isSent ? "bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] text-white rounded-2xl rounded-br-sm shadow-[0_4px_15px_rgba(139,92,246,0.2)]" : "bg-white/10 backdrop-blur-md text-gray-100 rounded-2xl rounded-bl-sm border border-white/5"}`}>
                   {msg.text}
                 </div>
               </div>
@@ -168,10 +172,7 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
 
       {/* --- SLEEK PILL-SHAPED INPUT AREA --- */}
       <div className="p-3 sm:p-4 bg-black/20 border-t border-white/5 backdrop-blur-md w-full overflow-hidden">
-        <form
-          onSubmit={sendMessage}
-          className="flex gap-2 max-w-4xl mx-auto w-full relative"
-        >
+        <form onSubmit={sendMessage} className="flex gap-2 max-w-4xl mx-auto w-full relative">
           <input
             type="text"
             value={text}
@@ -179,11 +180,7 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
             placeholder="Type a message..."
             className="flex-1 min-w-0 w-full bg-white/5 border border-white/10 rounded-full px-4 sm:px-5 py-3 text-white text-sm focus:outline-none focus:border-[#8b5cf6] focus:bg-white/10 transition-all placeholder-white/30 shadow-inner"
           />
-          <button
-            type="submit"
-            disabled={!text.trim()}
-            className="bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-50 disabled:hover:bg-[#8b5cf6] text-white px-5 sm:px-8 py-3 rounded-full font-semibold transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] active:scale-95 shrink-0"
-          >
+          <button type="submit" disabled={!text.trim()} className="bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-50 disabled:hover:bg-[#8b5cf6] text-white px-5 sm:px-8 py-3 rounded-full font-semibold transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] active:scale-95 shrink-0">
             Send
           </button>
         </form>

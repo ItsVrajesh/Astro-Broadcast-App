@@ -77,7 +77,7 @@ export default function App() {
               handleLogout={handleLogout}
               deleteChat={handleDeleteChat}
             />
-            <ChatWindow chat={selectedChat} currentUser={user} />
+            <ChatWindow chat={selectedChat} currentUser={user} selectChat={setSelectedChat} />
           </div>
 
         </div>

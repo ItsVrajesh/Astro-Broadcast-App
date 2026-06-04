@@ -14,17 +14,40 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
   const [text, setText] = useState("");
   const endRef = useRef(null);
 
+  const isFirstLoad = useRef(true);
+  const audio = useRef(new Audio("/notification.mp3"));
+
   useEffect(() => {
     if (!chat?.id) return;
+    
+    isFirstLoad.current = true;
+
     const q = query(
       collection(db, "chats", chat.id, "messages"),
-      orderBy("timestamp", "asc"),
+      orderBy("timestamp", "asc")
     );
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setMessages(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+
+      if (!isFirstLoad.current) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const newMessage = change.doc.data();
+            if (newMessage.senderId !== currentUser.uid) {
+              audio.current.play().catch((err) => {
+                console.log("Browser blocked autoplay:", err);
+              });
+            }
+          }
+        });
+      }
+
+      isFirstLoad.current = false;
     });
+    
     return () => unsubscribe();
-  }, [chat]);
+  }, [chat, currentUser.uid]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -78,19 +101,8 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
           onClick={() => selectChat(null)}
           className="md:hidden p-2 -ml-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-all"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2.5}
-              d="M15 19l-7-7 7-7"
-            />
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
 
@@ -111,7 +123,7 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
               key={msg.id}
               className={`flex gap-3 ${isSent ? "justify-end" : "justify-start"}`}
             >
-              {/* Receiver Avatar (with failsafe) */}
+              {/* Receiver Avatar */}
               {!isSent && (
                 <img
                   src={
@@ -122,21 +134,31 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
                   className="w-8 h-8 rounded-full border border-white/10 object-cover bg-gray-800 shrink-0 mt-auto"
                   onError={(e) => {
                     e.target.onerror = null;
-                    e.target.src =
-                      "https://ui-avatars.com/api/?name=U&background=374151&color=fff";
+                    e.target.src = "https://ui-avatars.com/api/?name=U&background=374151&color=fff";
                   }}
                 />
               )}
 
-              {/* Message Bubble */}
-              <div
-                className={`max-w-[75%] sm:max-w-[70%] px-4 py-2.5 text-[15px] shadow-sm leading-relaxed ${
-                  isSent
-                    ? "bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] text-white rounded-2xl rounded-br-sm shadow-[0_4px_15px_rgba(139,92,246,0.2)]"
-                    : "bg-white/10 backdrop-blur-md text-gray-100 rounded-2xl rounded-bl-sm border border-white/5"
-                }`}
-              >
-                {msg.text}
+              {/* Message Wrapper (Column) */}
+              <div className={`flex flex-col ${isSent ? "items-end" : "items-start"} max-w-[75%] sm:max-w-[70%]`}>
+                
+                {/* --- NEW: SENDER NAME DISPLAY --- */}
+                {!isSent && (
+                  <span className="text-[11px] text-white/40 font-semibold mb-1 ml-1 tracking-wider uppercase truncate max-w-full">
+                    {msg.displayName || "Unknown User"}
+                  </span>
+                )}
+
+                {/* Message Bubble */}
+                <div
+                  className={`px-4 py-2.5 text-[15px] shadow-sm leading-relaxed w-full ${
+                    isSent
+                      ? "bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] text-white rounded-2xl rounded-br-sm shadow-[0_4px_15px_rgba(139,92,246,0.2)]"
+                      : "bg-white/10 backdrop-blur-md text-gray-100 rounded-2xl rounded-bl-sm border border-white/5"
+                  }`}
+                >
+                  {msg.text}
+                </div>
               </div>
             </div>
           );
@@ -155,13 +177,11 @@ export default function ChatWindow({ chat, currentUser, selectChat }) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Type a message..."
-            // ADDED: min-w-0 and w-full completely stops it from pushing the button off-screen
             className="flex-1 min-w-0 w-full bg-white/5 border border-white/10 rounded-full px-4 sm:px-5 py-3 text-white text-sm focus:outline-none focus:border-[#8b5cf6] focus:bg-white/10 transition-all placeholder-white/30 shadow-inner"
           />
           <button
             type="submit"
             disabled={!text.trim()}
-            // TWEAKED: Adjusted mobile padding (px-5) so it fits beautifully on small phones
             className="bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-50 disabled:hover:bg-[#8b5cf6] text-white px-5 sm:px-8 py-3 rounded-full font-semibold transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] active:scale-95 shrink-0"
           >
             Send
